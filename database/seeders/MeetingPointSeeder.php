@@ -13,7 +13,7 @@ class MeetingPointSeeder extends Seeder
         $deir  = Location::where('name', 'دير البلح')->value('id');
         $kh    = Location::where('name', 'خانيونس')->value('id');
         $gaza  = Location::where('name', 'غزة')->value('id');
-        $rafah = Location::where('name', 'رفح')->value('id'); // لسه بدون نقاط
+        $rafah = Location::where('name', 'رفح')->value('id');
 
         $rows = [];
 
@@ -47,9 +47,14 @@ class MeetingPointSeeder extends Seeder
             ]);
         }
 
-        // رفح (لاحقاً)
+        // رفح
         if ($rafah) {
-            // لما تجهّزي 4 نقاط لرفح بنضيفهم هون
+            $rows = array_merge($rows, [
+                ['location_id' => $rafah, 'name' => 'دوار العودة'],
+                ['location_id' => $rafah, 'name' => 'السور'],
+                ['location_id' => $rafah, 'name' => 'دوار النجمة'],
+                ['location_id' => $rafah, 'name' => 'شارع البحر'],
+            ]);
         }
 
         // منع التكرار (على فهرس ['location_id','name'])

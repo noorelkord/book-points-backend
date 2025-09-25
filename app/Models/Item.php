@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Item extends Model
 {
     protected $fillable = [
+        'owner_id',
         'title',
         'type',
         'stage',
         'college_id',
+        'location_id',
         'meeting_point_id',
         'description',
-        'image_path',
+        'image_url',
         'is_active',
     ];
 
@@ -25,5 +27,15 @@ class Item extends Model
     public function meetingPoint()
     {
         return $this->belongsTo(\App\Models\MeetingPoint::class);
+    }
+
+    public function itemRequests()
+    {
+        return $this->hasMany(\App\Models\ItemRequest::class);
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'owner_id');
     }
 }

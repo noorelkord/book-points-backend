@@ -12,7 +12,7 @@ class LocationSeeder extends Seeder
         Location::insert([
             ['name' => 'غزة'],
             ['name' => 'دير البلح'],
-            ['name' => ' خانيونس'],
+            ['name' => 'خانيونس'],
             ['name' => 'رفح'],
         ]);
     }

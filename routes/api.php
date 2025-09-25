@@ -31,5 +31,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/items',       [ItemController::class, 'store']);
     Route::post('/items/{item}/reserve', [ItemController::class, 'reserve']);
+    Route::get('/items/reserved', [ItemController::class, 'reserved']);
 });
 

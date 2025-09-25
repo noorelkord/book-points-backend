@@ -10,7 +10,13 @@ class MeetingPointController extends Controller
     public function index(Request $request)
     {
         $meetingPoints = MeetingPoint::with(['location:id,name'])
-            ->where('is_active', true)
+            ->when($request->route('location'), function ($q) use ($request) {
+                $locationParam = $request->route('location');
+                $locationId = is_object($locationParam) && method_exists($locationParam, 'getKey')
+                    ? $locationParam->getKey()
+                    : (int) $locationParam;
+                return $q->where('location_id', $locationId);
+            })
             ->orderBy('name')
             ->get(['id', 'name', 'location_id']);
 

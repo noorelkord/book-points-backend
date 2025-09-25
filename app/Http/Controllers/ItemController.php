@@ -11,7 +11,7 @@ class ItemController extends Controller
 {
     public function index(Request $request)
     {
-        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id'])
+        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id', 'owner:id,name,phone'])
             ->when($request->filled('type'), fn($q) => $q->where('type', $request->string('type')))
             ->when($request->filled('stage'), fn($q) => $q->where('stage', $request->string('stage')))
             ->when($request->filled('college_id'), fn($q) => $q->where('college_id', $request->integer('college_id')))
@@ -50,7 +50,7 @@ class ItemController extends Controller
         $types = collect($validated['types'] ?? [])->filter()->values();
         $years = collect($validated['years'] ?? [])->filter()->values();
 
-        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id'])
+        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id', 'owner:id,name,phone'])
             ->when($types->isNotEmpty(), fn($q) => $q->whereIn('type', $types))
             ->when($years->isNotEmpty(), fn($q) => $q->whereIn('stage', $years))
             ->when($request->filled('college_id'), fn($q) => $q->where('college_id', $request->integer('college_id')))
@@ -76,10 +76,22 @@ class ItemController extends Controller
     public function store(StoreItemRequest $request)
     {
         $data = $request->validated();
-        if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('items', 'public');
+        $user = $request->user();
+
+        // derive owner and location from meeting point if not sent explicitly
+        $data['owner_id'] = $user?->id;
+        if (!isset($data['location_id']) && isset($data['meeting_point_id'])) {
+            $mp = \App\Models\MeetingPoint::find($data['meeting_point_id']);
+            if ($mp) {
+                $data['location_id'] = $mp->location_id;
+            }
         }
-        $item = Item::create($data)->load(['college:id,name','meetingPoint:id,name,location_id']);
+
+        if ($request->hasFile('image')) {
+            $data['image_url'] = $request->file('image')->store('items', 'public');
+        }
+
+        $item = Item::create($data)->load(['college:id,name','meetingPoint:id,name,location_id','owner:id,name,phone']);
 
         return response()->json(
             $item,
@@ -137,13 +149,37 @@ class ItemController extends Controller
 
         $queryString = $validated['q'];
 
-        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id'])
+        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id', 'owner:id,name,phone'])
             ->when(isset($validated['type']), fn($q) => $q->where('type', $validated['type']))
             ->where(function ($q) use ($queryString) {
                 $q->where('title', 'like', "%{$queryString}%");
             })
             ->orderByDesc('id')
             ->paginate((int)($validated['per_page'] ?? 20));
+
+        return response()->json(
+            $items,
+            200,
+            ['Content-Type' => 'application/json; charset=UTF-8'],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+    }
+
+    public function reserved(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $items = Item::with(['college:id,name', 'meetingPoint:id,name,location_id', 'owner:id,name,phone'])
+            ->whereHas('itemRequests', function ($q) use ($user) {
+                $q->where('requester_id', $user->id)
+                  ->where('status', 'pending');
+            })
+            ->orderByDesc('id')
+            ->paginate((int)$request->query('per_page', 20));
 
         return response()->json(
             $items,
